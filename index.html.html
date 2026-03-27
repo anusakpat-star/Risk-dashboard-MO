@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบริหารความเสี่ยง v48</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Sarabun', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .header h1 { font-size: 2.2em; margin-bottom: 10px; }
+
+        .tabs {
+            display: flex;
+            background: #f0f0f0;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 18px;
+            text-align: center;
+            background: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            font-size: 1.05em;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab:hover { background: #e0e0e0; }
+        .tab.active { background: white; color: #667eea; border-bottom: 3px solid #667eea; }
+
+        .content {
+            display: none;
+            padding: 30px;
+        }
+
+        .content.active { display: block; }
+
+        /* Risk Matrix Styles */
+        .risk-matrix-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .risk-matrix-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .matrix-wrapper {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 0;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .matrix-label-y {
+            grid-column: 1;
+            grid-row: 2;
+            display: flex;
+            flex-direction: column-reverse;
+            justify-content: space-between;
+            padding-right: 15px;
+        }
+
+        .matrix-label-y-title {
+            writing-mode: vertical-rl;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+            padding: 20px 0;
+        }
+
+        .matrix-y-item {
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .matrix-y-num {
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .matrix-y-label {
+            font-size: 0.85em;
+        }
+
+        .matrix-grid {
+            grid-column: 2;
+            grid-row: 2;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 2px;
+            background: white;
+        }
+
+        .matrix-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: white;
+            border-radius: 8px;
+            cursor: help;
+            transition: transform 0.2s;
+            min-height: 90px;
+        }
+
+        .matrix-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* สีตาม Risk Level */
+        .risk-1 { background: #27ae60; }
+        .risk-2 { background: #52c273; }
+        .risk-3 { background: #7ed956; }
+        .risk-4 { background: #a8e63d; }
+        .risk-5 { background: #d4f542; }
+        .risk-6 { background: #d4f542; }
+        .risk-8 { background: #f1c40f; }
+        .risk-9 { background: #f1c40f; }
+        .risk-10 { background: #f39c12; }
+        .risk-12 { background: #f39c12; }
+        .risk-15 { background: #e67e22; }
+        .risk-16 { background: #e74c3c; }
+        .risk-20 { background: #e74c3c; }
+        .risk-25 { background: #c0392b; }
+
+        .matrix-label-x {
+            grid-column: 2;
+            grid-row: 3;
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+        }
+
+        .matrix-x-item {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .matrix-x-num {
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .matrix-x-label {
+            font-size: 0.85em;
+        }
+
+        .matrix-legend {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+        }
+
+        .ews {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+        }
+
+        .ews-item {
+            background: rgba(255,255,255,0.2);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border-left: 4px solid white;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .required {
+            color: #e74c3c;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea { min-height: 80px; resize: vertical; }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 60px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn-secondary { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); }
+        .btn-small { padding: 8px 15px; font-size: 0.9em; }
+        .btn-delete { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .btn-edit { background: linear-gradient(135deg, #f39c12 0%, #d68910 100%); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover { background: #f8f9fa; }
+
+        .level-low { background: #27ae60; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; }
+        .level-medium { background: #f39c12; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; }
+        .level-high { background: #e74c3c; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; }
+        .level-very-high { background: #c0392b; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .metric-num { font-size: 2.5em; font-weight: bold; }
+
+        .chart-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-box h3 { margin-bottom: 20px; color: #333; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 0;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .close-modal {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-modal:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        @media (max-width: 768px) {
+            .row { grid-template-columns: 1fr; }
+            .tab { font-size: 0.9em; padding: 15px 10px; }
+            .matrix-cell { font-size: 1.5em; min-height: 70px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ ระบบบริหารจัดการความเสี่ยง v48</h1>
+            <p>องค์การตลาด กระทรวงมหาดไทย - พร้อมระบบแจ้งเตือน EWS + Risk Matrix</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab(0)">📊 Dashboard</button>
+            <button class="tab" onclick="showTab(1)">🎯 Risk Matrix</button>
+            <button class="tab" onclick="showTab(2)">➕ บันทึกความเสี่ยง</button>
+            <button class="tab" onclick="showTab(3)">📋 จัดการข้อมูล</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div class="content active" id="tab0">
+            <div id="ewsAlert"></div>
+
+            <div class="metrics" id="metricsContainer"></div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px;">
+                <div class="chart-box">
+                    <h3>📊 กราฟระดับความเสี่ยง</h3>
+                    <canvas id="chart1"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>📈 กราฟสถานะความเสี่ยง</h3>
+                    <canvas id="chart2"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>📊 กราฟประเภทความเสี่ยง</h3>
+                    <canvas id="chart3"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Matrix Tab -->
+        <div class="content" id="tab1">
+            <div class="risk-matrix-container">
+                <h2 class="risk-matrix-title">🎯 ตารางประเมินระดับความเสี่ยง (Risk Matrix)</h2>
+                
+                <div class="matrix-wrapper">
+                    <div style="grid-column: 1; grid-row: 1;"></div>
+                    
+                    <div class="matrix-label-y">
+                        <div class="matrix-label-y-title">ผลกระทบ (Impact)</div>
+                        <div class="matrix-y-item">
+                            <div class="matrix-y-num">5</div>
+                            <div class="matrix-y-label">Very High</div>
+                        </div>
+                        <div class="matrix-y-item">
+                            <div class="matrix-y-num">4</div>
+                            <div class="matrix-y-label">High</div>
+                        </div>
+                        <div class="matrix-y-item">
+                            <div class="matrix-y-num">3</div>
+                            <div class="matrix-y-label">Medium</div>
+                        </div>
+                        <div class="matrix-y-item">
+                            <div class="matrix-y-num">2</div>
+                            <div class="matrix-y-label">Low</div>
+                        </div>
+                        <div class="matrix-y-item">
+                            <div class="matrix-y-num">1</div>
+                            <div class="matrix-y-label">Very Low</div>
+                        </div>
+                    </div>
+
+                    <div class="matrix-grid">
+                        <!-- Row 5 -->
+                        <div class="matrix-cell risk-5" title="5×1=5 (ต่ำ)">5</div>
+                        <div class="matrix-cell risk-10" title="5×2=10 (กลาง)">10</div>
+                        <div class="matrix-cell risk-15" title="5×3=15 (สูง)">15</div>
+                        <div class="matrix-cell risk-20" title="5×4=20 (สูงมาก)">20</div>
+                        <div class="matrix-cell risk-25" title="5×5=25 (สูงมาก)">25</div>
+                        
+                        <!-- Row 4 -->
+                        <div class="matrix-cell risk-4" title="4×1=4 (ต่ำ)">4</div>
+                        <div class="matrix-cell risk-8" title="4×2=8 (กลาง)">8</div>
+                        <div class="matrix-cell risk-12" title="4×3=12 (สูง)">12</div>
+                        <div class="matrix-cell risk-16" title="4×4=16 (สูงมาก)">16</div>
+                        <div class="matrix-cell risk-20" title="4×5=20 (สูงมาก)">20</div>
+                        
+                        <!-- Row 3 -->
+                        <div class="matrix-cell risk-3" title="3×1=3 (ต่ำ)">3</div>
+                        <div class="matrix-cell risk-6" title="3×2=6 (กลาง)">6</div>
+                        <div class="matrix-cell risk-9" title="3×3=9 (กลาง)">9</div>
+                        <div class="matrix-cell risk-12" title="3×4=12 (สูง)">12</div>
+                        <div class="matrix-cell risk-15" title="3×5=15 (สูง)">15</div>
+                        
+                        <!-- Row 2 -->
+                        <div class="matrix-cell risk-2" title="2×1=2 (ต่ำ)">2</div>
+                        <div class="matrix-cell risk-4" title="2×2=4 (ต่ำ)">4</div>
+                        <div class="matrix-cell risk-6" title="2×3=6 (กลาง)">6</div>
+                        <div class="matrix-cell risk-8" title="2×4=8 (กลาง)">8</div>
+                        <div class="matrix-cell risk-10" title="2×5=10 (กลาง)">10</div>
+                        
+                        <!-- Row 1 -->
+                        <div class="matrix-cell risk-1" title="1×1=1 (ต่ำ)">1</div>
+                        <div class="matrix-cell risk-2" title="1×2=2 (ต่ำ)">2</div>
+                        <div class="matrix-cell risk-3" title="1×3=3 (ต่ำ)">3</div>
+                        <div class="matrix-cell risk-4" title="1×4=4 (ต่ำ)">4</div>
+                        <div class="matrix-cell risk-5" title="1×5=5 (ต่ำ)">5</div>
+                    </div>
+
+                    <div style="grid-column: 1; grid-row: 3;"></div>
+
+                    <div class="matrix-label-x">
+                        <div class="matrix-x-item">
+                            <div class="matrix-x-num">1</div>
+                            <div class="matrix-x-label">Remote</div>
+                        </div>
+                        <div class="matrix-x-item">
+                            <div class="matrix-x-num">2</div>
+                            <div class="matrix-x-label">Unlikely</div>
+                        </div>
+                        <div class="matrix-x-item">
+                            <div class="matrix-x-num">3</div>
+                            <div class="matrix-x-label">Possible</div>
+                        </div>
+                        <div class="matrix-x-item">
+                            <div class="matrix-x-num">4</div>
+                            <div class="matrix-x-label">Probable</div>
+                        </div>
+                        <div class="matrix-x-item">
+                            <div class="matrix-x-num">5</div>
+                            <div class="matrix-x-label">Certain</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px; font-weight: bold; font-size: 1.1em; color: #333;">
+                    โอกาสที่จะเกิด (Likelihood)
+                </div>
+
+                <div class="matrix-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #27ae60;"></div>
+                        <span><strong>ต่ำ (1-5)</strong></span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f1c40f;"></div>
+                        <span><strong>กลาง (6-11)</strong></span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e67e22;"></div>
+                        <span><strong>สูง (12-19)</strong></span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #c0392b;"></div>
+                        <span><strong>สูงมาก (20-25)</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Tab -->
+        <div class="content" id="tab2">
+            <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                <h2 style="margin-bottom: 25px; color: #667eea;">📝 บันทึกข้อมูลความเสี่ยง</h2>
+                
+                <form id="riskForm" onsubmit="save(event)">
+                    <div class="form-group">
+                        <label>เหตุการณ์ <span class="required">*</span></label>
+                        <textarea id="event" required placeholder="ระบุเหตุการณ์ที่อาจก่อให้เกิดความเสี่ยง"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ความเสี่ยง <span class="required">*</span></label>
+                        <textarea id="risk" required placeholder="ระบุความเสี่ยงที่อาจเกิดขึ้น"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ประเภทความเสี่ยง <span class="required">*</span></label>
+                        <select id="riskType" required>
+                            <option value="">-- เลือกประเภทความเสี่ยง --</option>
+                            <option value="ด้านกลยุทธ์">ด้านกลยุทธ์</option>
+                            <option value="ด้านการดำเนินงาน">ด้านการดำเนินงาน</option>
+                            <option value="ด้านการเงิน">ด้านการเงิน</option>
+                            <option value="ด้านการปฏิบัติตามกฎระเบียบ">ด้านการปฏิบัติตามกฎระเบียบ</option>
+                        </select>
+                    </div>
+
+                    <h3 style="margin: 25px 0 15px; color: #667eea;">ระดับความเสี่ยงก่อนการจัดการ</h3>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>โอกาสเกิด (1-5) <span class="required">*</span></label>
+                            <input type="number" id="prob1" min="1" max="5" required oninput="calc1()">
+                            <small style="color: #666;">1=Remote 5=Certain</small>
+                        </div>
+                        <div class="form-group">
+                            <label>ผลกระทบ (1-5) <span class="required">*</span></label>
+                            <input type="number" id="impact1" min="1" max="5" required oninput="calc1()">
+                            <small style="color: #666;">1=Very Low 5=Very High</small>
+                        </div>
+                        <div class="score" id="score1">-</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ผลดำเนินการ <span class="required">*</span></label>
+                        <textarea id="action" required placeholder="ระบุผลการดำเนินการจัดการความเสี่ยง"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>วิธีการจัดการความเสี่ยง <span class="required">*</span></label>
+                        <select id="method" required>
+                            <option value="">-- เลือกวิธีการ --</option>
+                            <option value="ยอมรับ (Take)">ยอมรับความเสี่ยง (Take)</option>
+                            <option value="ลดผลกระทบ (Treat)">ลดผลกระทบ (Treat)</option>
+                            <option value="โอนถ่าย (Transfer)">โอนถ่ายความเสี่ยง (Transfer)</option>
+                            <option value="หลีกเลี่ยง (Terminate)">หลีกเลี่ยงความเสี่ยง (Terminate)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ปัญหาอุปสรรค</label>
+                        <textarea id="obstacle" placeholder="ระบุปัญหาอุปสรรค (ถ้ามี)"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ผู้รับผิดชอบ <span class="required">*</span></label>
+                        <input type="text" id="owner" required placeholder="ระบุชื่อผู้รับผิดชอบ">
+                    </div>
+
+                    <div class="form-group">
+                        <label>ฝ่าย/หน่วยงาน <span class="required">*</span></label>
+                        <select id="department" required>
+                            <option value="">-- เลือกฝ่าย/หน่วยงาน --</option>
+                            <optgroup label="ฝ่ายบริหาร">
+                                <option value="ฝ่ายตรวจสอบภายใน">ฝ่ายตรวจสอบภายใน</option>
+                                <option value="ฝ่ายการประชุมและยานพาหนะ">ฝ่ายการประชุมและยานพาหนะ</option>
+                                <option value="ฝ่ายประชาสัมพันธ์">ฝ่ายประชาสัมพันธ์</option>
+                                <option value="ฝ่ายสารสนเทศ">ฝ่ายสารสนเทศ</option>
+                            </optgroup>
+                            <optgroup label="ฝ่ายปฏิบัติการ">
+                                <option value="ฝ่ายตลาดและจัดส่งสินค้า">ฝ่ายตลาดและจัดส่งสินค้า</option>
+                                <option value="ฝ่ายกิจการพิเศษ">ฝ่ายกิจการพิเศษ</option>
+                            </optgroup>
+                            <optgroup label="ฝ่ายวางแผนและความเสี่ยง">
+                                <option value="ฝ่ายวางแผนและงบประมาณ">ฝ่ายวางแผนและงบประมาณ</option>
+                                <option value="ฝ่ายติดตามและประเมินผล">ฝ่ายติดตามและประเมินผล</option>
+                                <option value="ฝ่ายบริหารความเสี่ยง">ฝ่ายบริหารความเสี่ยง</option>
+                            </optgroup>
+                            <optgroup label="ฝ่ายสนับสนุน">
+                                <option value="ฝ่ายบริหารบุคคล">ฝ่ายบริหารบุคคล</option>
+                                <option value="ฝ่ายจัดหาและพัสดุ">ฝ่ายจัดหาและพัสดุ</option>
+                                <option value="ฝ่ายกฎหมาย">ฝ่ายกฎหมาย</option>
+                            </optgroup>
+                            <optgroup label="ฝ่ายการเงินและบัญชี">
+                                <option value="ฝ่ายบัญชี">ฝ่ายบัญชี</option>
+                                <option value="ฝ่ายการเงิน">ฝ่ายการเงิน</option>
+                            </optgroup>
+                            <optgroup label="สำนักงานตลาดสาขา">
+                                <option value="สำนักงานตลาดสาขาตลิ่งชัน">สำนักงานตลาดสาขาตลิ่งชัน</option>
+                                <option value="สำนักงานตลาดสาขาปากคลองตลาด">สำนักงานตลาดสาขาปากคลองตลาด</option>
+                                <option value="สำนักงานตลาดสาขาบางคล้า">สำนักงานตลาดสาขาบางคล้า</option>
+                                <option value="สำนักงานตลาดสาขาหนองม่วง">สำนักงานตลาดสาขาหนองม่วง</option>
+                                <option value="สำนักงานตลาดสาขาลำพูน">สำนักงานตลาดสาขาลำพูน</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <h3 style="margin: 25px 0 15px; color: #667eea;">ระดับความเสี่ยงคงเหลือ</h3>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>โอกาสเกิด (1-5) <span class="required">*</span></label>
+                            <input type="number" id="prob2" min="1" max="5" required oninput="calc2()">
+                        </div>
+                        <div class="form-group">
+                            <label>ผลกระทบ (1-5) <span class="required">*</span></label>
+                            <input type="number" id="impact2" min="1" max="5" required oninput="calc2()">
+                        </div>
+                        <div class="score" id="score2">-</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>สถานะความเสี่ยง <span class="required">*</span></label>
+                        <select id="status" required>
+                            <option value="">-- เลือกสถานะ --</option>
+                            <option value="✓">✓ ดำเนินการเสร็จสิ้น</option>
+                            <option value="×">× ยังไม่สามารถจัดการได้</option>
+                            <option value="○">○ อยู่ระหว่างดำเนินการ</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <button type="submit" class="btn">💾 บันทึกข้อมูล</button>
+                        <button type="reset" class="btn btn-secondary" onclick="resetScores()">🔄 ล้างฟอร์ม</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Table Tab -->
+        <div class="content" id="tab3">
+            <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                <h2 style="margin-bottom: 20px; color: #667eea;">📋 รายการความเสี่ยงทั้งหมด</h2>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-small" onclick="loadSample()">📊 โหลดข้อมูลตัวอย่าง</button>
+                    <button class="btn btn-small" onclick="exportExcel()" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">📥 Export Excel</button>
+                    <button class="btn btn-small" onclick="document.getElementById('importFile').click()" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">📤 Import Excel</button>
+                    <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="importExcel(event)">
+                </div>
+
+                <!-- ระบบค้นหาและกรอง -->
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">🔍 ค้นหาและกรองข้อมูล</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <label style="font-size: 0.9em; margin-bottom: 5px; display: block;">ค้นหาคำ</label>
+                            <input type="text" id="searchText" placeholder="ค้นหา..." oninput="filterTable()" style="width: 100%; padding: 8px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.9em; margin-bottom: 5px; display: block;">กรองตามประเภท</label>
+                            <select id="filterType" onchange="filterTable()" style="width: 100%; padding: 8px;">
+                                <option value="">ทุกประเภท</option>
+                                <option value="ด้านกลยุทธ์">ด้านกลยุทธ์</option>
+                                <option value="ด้านการดำเนินงาน">ด้านการดำเนินงาน</option>
+                                <option value="ด้านการเงิน">ด้านการเงิน</option>
+                                <option value="ด้านการปฏิบัติตามกฎระเบียบ">ด้านการปฏิบัติตามกฎระเบียบ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.9em; margin-bottom: 5px; display: block;">กรองตามฝ่าย</label>
+                            <select id="filterDept" onchange="filterTable()" style="width: 100%; padding: 8px;">
+                                <option value="">ทุกฝ่าย</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.9em; margin-bottom: 5px; display: block;">กรองตามระดับ</label>
+                            <select id="filterLevel" onchange="filterTable()" style="width: 100%; padding: 8px;">
+                                <option value="">ทุกระดับ</option>
+                                <option value="สูงมาก">สูงมาก</option>
+                                <option value="สูง">สูง</option>
+                                <option value="กลาง">กลาง</option>
+                                <option value="ต่ำ">ต่ำ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.9em; margin-bottom: 5px; display: block;">กรองตามสถานะ</label>
+                            <select id="filterStatus" onchange="filterTable()" style="width: 100%; padding: 8px;">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="✓">✓ เสร็จสิ้น</option>
+                                <option value="×">× ไม่สามารถจัดการได้</option>
+                                <option value="○">○ ระหว่างดำเนินการ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; text-align: right;">
+                        <button class="btn btn-small btn-secondary" onclick="clearFilter()">🔄 ล้างการกรอง</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table id="table">
+                        <thead>
+                            <tr>
+                                <th>ลำดับ</th>
+                                <th>เหตุการณ์</th>
+                                <th>ความเสี่ยง</th>
+                                <th>ประเภท</th>
+                                <th>ก่อนจัดการ</th>
+                                <th>ผลดำเนินการ</th>
+                                <th>หลังจัดการ</th>
+                                <th>สถานะ</th>
+                                <th>วิธีจัดการ</th>
+                                <th>ผู้รับผิดชอบ</th>
+                                <th>ฝ่าย</th>
+                                <th>ปัญหา</th>
+                                <th>วันที่บันทึก</th>
+                                <th>วันที่แก้ไข</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody">
+                            <tr><td colspan="15" style="text-align:center; padding:30px;">ไม่มีข้อมูล กดปุ่ม Import Excel หรือโหลดข้อมูลตัวอย่าง</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal แก้ไข -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ แก้ไขข้อมูลความเสี่ยง</h2>
+                <button class="close-modal" onclick="closeEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editIndex">
+                
+                <div class="form-group">
+                    <label>เหตุการณ์</label>
+                    <textarea id="editEvent"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ความเสี่ยง</label>
+                    <textarea id="editRisk"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ประเภทความเสี่ยง</label>
+                    <select id="editRiskType">
+                        <option value="ด้านกลยุทธ์">ด้านกลยุทธ์</option>
+                        <option value="ด้านการดำเนินงาน">ด้านการดำเนินงาน</option>
+                        <option value="ด้านการเงิน">ด้านการเงิน</option>
+                        <option value="ด้านการปฏิบัติตามกฎระเบียบ">ด้านการปฏิบัติตามกฎระเบียบ</option>
+                    </select>
+                </div>
+
+                <h3 style="margin: 20px 0 15px; color: #667eea;">ก่อนการจัดการ</h3>
+                <div class="row">
+                    <div class="form-group">
+                        <label>โอกาสเกิด (1-5)</label>
+                        <input type="number" id="editProb1" min="1" max="5" oninput="calcEdit1()">
+                    </div>
+                    <div class="form-group">
+                        <label>ผลกระทบ (1-5)</label>
+                        <input type="number" id="editImpact1" min="1" max="5" oninput="calcEdit1()">
+                    </div>
+                    <div class="score" id="editScore1">-</div>
+                </div>
+
+                <div class="form-group">
+                    <label>ผลดำเนินการ</label>
+                    <textarea id="editAction"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>วิธีการจัดการ</label>
+                    <select id="editMethod">
+                        <option value="ยอมรับ (Take)">ยอมรับความเสี่ยง (Take)</option>
+                        <option value="ลดผลกระทบ (Treat)">ลดผลกระทบ (Treat)</option>
+                        <option value="โอนถ่าย (Transfer)">โอนถ่ายความเสี่ยง (Transfer)</option>
+                        <option value="หลีกเลี่ยง (Terminate)">หลีกเลี่ยงความเสี่ยง (Terminate)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>ปัญหาอุปสรรค</label>
+                    <textarea id="editObstacle"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ผู้รับผิดชอบ</label>
+                    <input type="text" id="editOwner">
+                </div>
+
+                <div class="form-group">
+                    <label>ฝ่าย/หน่วยงาน</label>
+                    <select id="editDepartment">
+                        <optgroup label="ฝ่ายบริหาร">
+                            <option value="ฝ่ายตรวจสอบภายใน">ฝ่ายตรวจสอบภายใน</option>
+                            <option value="ฝ่ายการประชุมและยานพาหนะ">ฝ่ายการประชุมและยานพาหนะ</option>
+                            <option value="ฝ่ายประชาสัมพันธ์">ฝ่ายประชาสัมพันธ์</option>
+                            <option value="ฝ่ายสารสนเทศ">ฝ่ายสารสนเทศ</option>
+                        </optgroup>
+                        <optgroup label="ฝ่ายปฏิบัติการ">
+                            <option value="ฝ่ายตลาดและจัดส่งสินค้า">ฝ่ายตลาดและจัดส่งสินค้า</option>
+                            <option value="ฝ่ายกิจการพิเศษ">ฝ่ายกิจการพิเศษ</option>
+                        </optgroup>
+                        <optgroup label="ฝ่ายวางแผนและความเสี่ยง">
+                            <option value="ฝ่ายวางแผนและงบประมาณ">ฝ่ายวางแผนและงบประมาณ</option>
+                            <option value="ฝ่ายติดตามและประเมินผล">ฝ่ายติดตามและประเมินผล</option>
+                            <option value="ฝ่ายบริหารความเสี่ยง">ฝ่ายบริหารความเสี่ยง</option>
+                        </optgroup>
+                        <optgroup label="ฝ่ายสนับสนุน">
+                            <option value="ฝ่ายบริหารบุคคล">ฝ่ายบริหารบุคคล</option>
+                            <option value="ฝ่ายจัดหาและพัสดุ">ฝ่ายจัดหาและพัสดุ</option>
+                            <option value="ฝ่ายกฎหมาย">ฝ่ายกฎหมาย</option>
+                        </optgroup>
+                        <optgroup label="ฝ่ายการเงินและบัญชี">
+                            <option value="ฝ่ายบัญชี">ฝ่ายบัญชี</option>
+                            <option value="ฝ่ายการเงิน">ฝ่ายการเงิน</option>
+                        </optgroup>
+                        <optgroup label="สำนักงานตลาดสาขา">
+                            <option value="สำนักงานตลาดสาขาตลิ่งชัน">สำนักงานตลาดสาขาตลิ่งชัน</option>
+                            <option value="สำนักงานตลาดสาขาปากคลองตลาด">สำนักงานตลาดสาขาปากคลองตลาด</option>
+                            <option value="สำนักงานตลาดสาขาบางคล้า">สำนักงานตลาดสาขาบางคล้า</option>
+                            <option value="สำนักงานตลาดสาขาหนองม่วง">สำนักงานตลาดสาขาหนองม่วง</option>
+                            <option value="สำนักงานตลาดสาขาลำพูน">สำนักงานตลาดสาขาลำพูน</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <h3 style="margin: 20px 0 15px; color: #667eea;">หลังการจัดการ</h3>
+                <div class="row">
+                    <div class="form-group">
+                        <label>โอกาสเกิด (1-5)</label>
+                        <input type="number" id="editProb2" min="1" max="5" oninput="calcEdit2()">
+                    </div>
+                    <div class="form-group">
+                        <label>ผลกระทบ (1-5)</label>
+                        <input type="number" id="editImpact2" min="1" max="5" oninput="calcEdit2()">
+                    </div>
+                    <div class="score" id="editScore2">-</div>
+                </div>
+
+                <div class="form-group">
+                    <label>สถานะ</label>
+                    <select id="editStatus">
+                        <option value="✓">✓ เสร็จสิ้น</option>
+                        <option value="×">× ไม่สามารถจัดการได้</option>
+                        <option value="○">○ ระหว่างดำเนินการ</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 25px;">
+                    <button class="btn" onclick="saveEdit()">💾 บันทึกการแก้ไข</button>
+                    <button class="btn btn-secondary" onclick="closeEditModal()">❌ ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let filteredData = [];
+        let charts = {};
+
+        function formatDate(date) {
+            const d = new Date(date);
+            const year = d.getFullYear() + 543;
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        }
+
+        function showTab(n) {
+            document.querySelectorAll('.content').forEach((el, i) => {
+                el.classList.toggle('active', i === n);
+            });
+            document.querySelectorAll('.tab').forEach((el, i) => {
+                el.classList.toggle('active', i === n);
+            });
+            if(n === 0) update();
+        }
+
+        function getLevel(score) {
+            if(score >= 20) return 'สูงมาก';
+            if(score >= 12) return 'สูง';
+            if(score >= 6) return 'กลาง';
+            return 'ต่ำ';
+        }
+
+        function getLevelClass(score) {
+            if(score >= 20) return 'level-very-high';
+            if(score >= 12) return 'level-high';
+            if(score >= 6) return 'level-medium';
+            return 'level-low';
+        }
+
+        function calc1() {
+            const p = parseInt(document.getElementById('prob1').value) || 0;
+            const i = parseInt(document.getElementById('impact1').value) || 0;
+            const s = p * i;
+            document.getElementById('score1').innerHTML = s > 0 ? `${p}×${i}=${s}<br>${getLevel(s)}` : '-';
+        }
+
+        function calc2() {
+            const p = parseInt(document.getElementById('prob2').value) || 0;
+            const i = parseInt(document.getElementById('impact2').value) || 0;
+            const s = p * i;
+            document.getElementById('score2').innerHTML = s > 0 ? `${p}×${i}=${s}<br>${getLevel(s)}` : '-';
+        }
+
+        function resetScores() {
+            document.getElementById('score1').innerHTML = '-';
+            document.getElementById('score2').innerHTML = '-';
+        }
+
+        function save(e) {
+            e.preventDefault();
+            
+            const event = document.getElementById('event').value.trim();
+            const risk = document.getElementById('risk').value.trim();
+            const riskType = document.getElementById('riskType').value;
+            const prob1 = parseInt(document.getElementById('prob1').value);
+            const impact1 = parseInt(document.getElementById('impact1').value);
+            const action = document.getElementById('action').value.trim();
+            const method = document.getElementById('method').value;
+            const obstacle = document.getElementById('obstacle').value.trim();
+            const owner = document.getElementById('owner').value.trim();
+            const department = document.getElementById('department').value;
+            const prob2 = parseInt(document.getElementById('prob2').value);
+            const impact2 = parseInt(document.getElementById('impact2').value);
+            const status = document.getElementById('status').value;
+
+            const score1 = prob1 * impact1;
+            const score2 = prob2 * impact2;
+            const now = new Date().toISOString();
+
+            data.push({
+                event, risk, riskType, prob1, impact1, score1, level1: getLevel(score1),
+                action, method, obstacle, owner, department, prob2, impact2, score2, level2: getLevel(score2), status,
+                createdAt: now,
+                updatedAt: now
+            });
+
+            alert('✅ บันทึกข้อมูลเรียบร้อยแล้ว!');
+            document.getElementById('riskForm').reset();
+            resetScores();
+            updateTable();
+            updateDepartmentFilter();
+            update();
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tbody');
+            
+            const displayData = filteredData.length > 0 || document.getElementById('searchText').value || 
+                               document.getElementById('filterType').value || document.getElementById('filterDept').value || 
+                               document.getElementById('filterLevel').value || document.getElementById('filterStatus').value ? filteredData : data;
+            
+            if(displayData.length === 0 && data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align:center; padding:30px;">ไม่มีข้อมูล</td></tr>';
+                return;
+            }
+            
+            if(displayData.length === 0 && data.length > 0) {
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align:center; padding:30px;">ไม่พบข้อมูลที่ค้นหา</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = displayData.map((d, i) => {
+                const originalIndex = data.indexOf(d);
+                return `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>${d.event}</td>
+                    <td>${d.risk}</td>
+                    <td><span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">${d.riskType}</span></td>
+                    <td><span class="${getLevelClass(d.score1)}">${d.prob1}×${d.impact1}=${d.score1}<br>${d.level1}</span></td>
+                    <td>${d.action.substring(0,60)}${d.action.length>60?'...':''}</td>
+                    <td><span class="${getLevelClass(d.score2)}">${d.prob2}×${d.impact2}=${d.score2}<br>${d.level2}</span></td>
+                    <td style="text-align:center; font-size:1.3em;">${d.status}</td>
+                    <td>${d.method}</td>
+                    <td>${d.owner}</td>
+                    <td>${d.department}</td>
+                    <td>${d.obstacle ? d.obstacle.substring(0,40) : '-'}</td>
+                    <td style="font-size:0.85em;">${formatDate(d.createdAt)}</td>
+                    <td style="font-size:0.85em;">${d.updatedAt !== d.createdAt ? formatDate(d.updatedAt) : '-'}</td>
+                    <td>
+                        <button class="btn btn-small btn-edit" onclick="editRisk(${originalIndex})">✏️</button>
+                        <button class="btn btn-small btn-delete" onclick="del(${originalIndex})">🗑️</button>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function del(index) {
+            if(confirm('ต้องการลบข้อมูลนี้?')) {
+                data.splice(index, 1);
+                filterTable();
+                update();
+            }
+        }
+
+        function filterTable() {
+            const searchText = document.getElementById('searchText').value.toLowerCase();
+            const filterType = document.getElementById('filterType').value;
+            const filterDept = document.getElementById('filterDept').value;
+            const filterLevel = document.getElementById('filterLevel').value;
+            const filterStatus = document.getElementById('filterStatus').value;
+
+            filteredData = data.filter(d => {
+                const matchText = !searchText || 
+                    d.event.toLowerCase().includes(searchText) || 
+                    d.risk.toLowerCase().includes(searchText) ||
+                    d.owner.toLowerCase().includes(searchText);
+                
+                const matchType = !filterType || d.riskType === filterType;
+                const matchDept = !filterDept || d.department === filterDept;
+                const matchLevel = !filterLevel || d.level2 === filterLevel;
+                const matchStatus = !filterStatus || d.status === filterStatus;
+
+                return matchText && matchType && matchDept && matchLevel && matchStatus;
+            });
+
+            updateTable();
+        }
+
+        function clearFilter() {
+            document.getElementById('searchText').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterDept').value = '';
+            document.getElementById('filterLevel').value = '';
+            document.getElementById('filterStatus').value = '';
+            filteredData = [];
+            updateTable();
+        }
+
+        function updateDepartmentFilter() {
+            const departments = [...new Set(data.map(d => d.department))].sort();
+            const select = document.getElementById('filterDept');
+            const currentValue = select.value;
+            
+            select.innerHTML = '<option value="">ทุกฝ่าย</option>';
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                select.appendChild(option);
+            });
+            
+            select.value = currentValue;
+        }
+
+        function editRisk(index) {
+            const d = data[index];
+            
+            document.getElementById('editIndex').value = index;
+            document.getElementById('editEvent').value = d.event;
+            document.getElementById('editRisk').value = d.risk;
+            document.getElementById('editRiskType').value = d.riskType;
+            document.getElementById('editProb1').value = d.prob1;
+            document.getElementById('editImpact1').value = d.impact1;
+            document.getElementById('editAction').value = d.action;
+            document.getElementById('editMethod').value = d.method;
+            document.getElementById('editObstacle').value = d.obstacle;
+            document.getElementById('editOwner').value = d.owner;
+            document.getElementById('editDepartment').value = d.department;
+            document.getElementById('editProb2').value = d.prob2;
+            document.getElementById('editImpact2').value = d.impact2;
+            document.getElementById('editStatus').value = d.status;
+            
+            calcEdit1();
+            calcEdit2();
+            
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        function calcEdit1() {
+            const p = parseInt(document.getElementById('editProb1').value) || 0;
+            const i = parseInt(document.getElementById('editImpact1').value) || 0;
+            const s = p * i;
+            document.getElementById('editScore1').innerHTML = s > 0 ? `${p}×${i}=${s}<br>${getLevel(s)}` : '-';
+        }
+
+        function calcEdit2() {
+            const p = parseInt(document.getElementById('editProb2').value) || 0;
+            const i = parseInt(document.getElementById('editImpact2').value) || 0;
+            const s = p * i;
+            document.getElementById('editScore2').innerHTML = s > 0 ? `${p}×${i}=${s}<br>${getLevel(s)}` : '-';
+        }
+
+        function saveEdit() {
+            const index = parseInt(document.getElementById('editIndex').value);
+            const event = document.getElementById('editEvent').value.trim();
+            const risk = document.getElementById('editRisk').value.trim();
+            const riskType = document.getElementById('editRiskType').value;
+            const prob1 = parseInt(document.getElementById('editProb1').value);
+            const impact1 = parseInt(document.getElementById('editImpact1').value);
+            const action = document.getElementById('editAction').value.trim();
+            const method = document.getElementById('editMethod').value;
+            const obstacle = document.getElementById('editObstacle').value.trim();
+            const owner = document.getElementById('editOwner').value.trim();
+            const department = document.getElementById('editDepartment').value;
+            const prob2 = parseInt(document.getElementById('editProb2').value);
+            const impact2 = parseInt(document.getElementById('editImpact2').value);
+            const status = document.getElementById('editStatus').value;
+
+            const score1 = prob1 * impact1;
+            const score2 = prob2 * impact2;
+
+            data[index] = {
+                ...data[index],
+                event, risk, riskType, prob1, impact1, score1, level1: getLevel(score1),
+                action, method, obstacle, owner, department, prob2, impact2, score2, level2: getLevel(score2), status,
+                updatedAt: new Date().toISOString()
+            };
+
+            alert('✅ แก้ไขข้อมูลเรียบร้อยแล้ว!');
+            closeEditModal();
+            filterTable();
+            update();
+            updateDepartmentFilter();
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target == modal) {
+                closeEditModal();
+            }
+        }
+
+        function update() {
+            updateEWS();
+            updateMetrics();
+            updateCharts();
+        }
+
+        function updateEWS() {
+            const high = data.filter(d => d.score2 >= 12 || d.status === '×');
+            const div = document.getElementById('ewsAlert');
+            
+            if(high.length === 0) {
+                div.innerHTML = '';
+                return;
+            }
+
+            div.innerHTML = `
+                <div class="ews">
+                    <h3>🚨 EWS - Early Warning System</h3>
+                    <p style="margin-bottom:15px;">พบความเสี่ยงที่ต้องเร่งดำเนินการ ${high.length} รายการ</p>
+                    ${high.map((d, i) => `
+                        <div class="ews-item">
+                            <strong>${i+1}. ${d.event}</strong><br>
+                            ระดับความเสี่ยงคงเหลือ: ${d.score2} (${d.level2})<br>
+                            สถานะ: ${d.status === '×' ? 'ยังไม่สามารถจัดการได้' : 'ต้องติดตาม'}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function updateMetrics() {
+            const total = data.length;
+            const veryHigh = data.filter(d => d.score2 >= 20).length;
+            const high = data.filter(d => d.score2 >= 12 && d.score2 < 20).length;
+            const notManaged = data.filter(d => d.status === '×').length;
+
+            document.getElementById('metricsContainer').innerHTML = `
+                <div class="metric">
+                    <div class="metric-num">${total}</div>
+                    <div>ความเสี่ยงทั้งหมด</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #c0392b 0%, #8e2323 100%);">
+                    <div class="metric-num">${veryHigh}</div>
+                    <div>ความเสี่ยงสูงมาก</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <div class="metric-num">${high}</div>
+                    <div>ความเสี่ยงสูง</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);">
+                    <div class="metric-num">${notManaged}</div>
+                    <div>ยังไม่สามารถจัดการได้</div>
+                </div>
+            `;
+        }
+
+        function updateCharts() {
+            const levels = {ต่ำ:0, กลาง:0, สูง:0, สูงมาก:0};
+            data.forEach(d => levels[d.level2]++);
+
+            const ctx1 = document.getElementById('chart1');
+            if(charts.c1) charts.c1.destroy();
+            charts.c1 = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['ต่ำ', 'กลาง', 'สูง', 'สูงมาก'],
+                    datasets: [{
+                        label: 'จำนวน',
+                        data: [levels.ต่ำ, levels.กลาง, levels.สูง, levels.สูงมาก],
+                        backgroundColor: ['#27ae60', '#f39c12', '#e74c3c', '#c0392b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, ticks: {stepSize: 1} } }
+                }
+            });
+
+            const statuses = {'✓':0, '×':0, '○':0};
+            data.forEach(d => statuses[d.status]++);
+
+            const ctx2 = document.getElementById('chart2');
+            if(charts.c2) charts.c2.destroy();
+            charts.c2 = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เสร็จสิ้น (✓)', 'ไม่สามารถจัดการ (×)', 'ระหว่างดำเนินการ (○)'],
+                    datasets: [{
+                        data: [statuses['✓'], statuses['×'], statuses['○']],
+                        backgroundColor: ['#27ae60', '#e74c3c', '#3498db']
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            const types = {
+                'ด้านกลยุทธ์': 0,
+                'ด้านการดำเนินงาน': 0,
+                'ด้านการเงิน': 0,
+                'ด้านการปฏิบัติตามกฎระเบียบ': 0
+            };
+            data.forEach(d => {
+                if(d.riskType && types.hasOwnProperty(d.riskType)) {
+                    types[d.riskType]++;
+                }
+            });
+
+            const ctx3 = document.getElementById('chart3');
+            if(charts.c3) charts.c3.destroy();
+            charts.c3 = new Chart(ctx3, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(types),
+                    datasets: [{
+                        data: Object.values(types),
+                        backgroundColor: ['#667eea', '#36a2eb', '#ffce56', '#4bc0c0']
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadSample() {
+            if(confirm('โหลดข้อมูลตัวอย่าง?')) {
+                const now = new Date().toISOString();
+                data = [{
+                    event: "ไม่สามารถจัดทำ KPI ของพนักงานองค์การตลาดได้",
+                    risk: "ไม่สามารถวัดผลการปฏิบัติงานของพนักงาน",
+                    riskType: "ด้านการดำเนินงาน",
+                    prob1: 3, impact1: 5, score1: 15, level1: "สูง",
+                    action: "ยังไม่สามารถดำเนินการจัดทำ KPI ในปีงบประมาณ 2568",
+                    method: "ยอมรับ (Take)",
+                    obstacle: "มีการเปลี่ยนแปลงนโยบายด้านการบริหารบุคคล",
+                    owner: "นายสมชาย ใจดี",
+                    department: "ฝ่ายบริหารบุคคล",
+                    prob2: 5, impact2: 5, score2: 25, level2: "สูงมาก",
+                    status: "×",
+                    createdAt: now,
+                    updatedAt: now
+                }];
+                filteredData = [];
+                updateTable();
+                update();
+                updateDepartmentFilter();
+                alert('✅ โหลดข้อมูลตัวอย่างเรียบร้อย');
+            }
+        }
+
+        function exportExcel() {
+            if(data.length === 0) {
+                alert('❌ ไม่มีข้อมูลให้ Export');
+                return;
+            }
+
+            const excelData = data.map((d, i) => ({
+                'ลำดับ': i + 1,
+                'เหตุการณ์': d.event,
+                'ความเสี่ยง': d.risk,
+                'ประเภทความเสี่ยง': d.riskType,
+                'โอกาสเกิด(ก่อน)': d.prob1,
+                'ผลกระทบ(ก่อน)': d.impact1,
+                'คะแนน(ก่อน)': d.score1,
+                'ระดับ(ก่อน)': d.level1,
+                'ผลดำเนินการ': d.action,
+                'วิธีการจัดการ': d.method,
+                'ผู้รับผิดชอบ': d.owner,
+                'ฝ่าย': d.department,
+                'โอกาสเกิด(หลัง)': d.prob2,
+                'ผลกระทบ(หลัง)': d.impact2,
+                'คะแนน(หลัง)': d.score2,
+                'ระดับ(หลัง)': d.level2,
+                'สถานะ': d.status,
+                'ปัญหาอุปสรรค': d.obstacle || '',
+                'วันที่บันทึก': formatDate(d.createdAt),
+                'วันที่แก้ไข': d.updatedAt !== d.createdAt ? formatDate(d.updatedAt) : ''
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            XLSX.utils.book_append_sheet(wb, ws, 'ความเสี่ยง');
+
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            const filename = `Risk_Register_${dateStr}.xlsx`;
+
+            XLSX.writeFile(wb, filename);
+            alert('✅ Export ไฟล์ Excel เรียบร้อยแล้ว!');
+        }
+
+        function importExcel(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const arrayData = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(arrayData, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if(jsonData.length === 0) {
+                        alert('❌ ไฟล์ว่างเปล่า');
+                        return;
+                    }
+
+                    const now = new Date().toISOString();
+                    const importedData = jsonData.map(row => {
+                        const prob1 = parseInt(row['โอกาสเกิด(ก่อน)']) || 0;
+                        const impact1 = parseInt(row['ผลกระทบ(ก่อน)']) || 0;
+                        const prob2 = parseInt(row['โอกาสเกิด(หลัง)']) || 0;
+                        const impact2 = parseInt(row['ผลกระทบ(หลัง)']) || 0;
+
+                        return {
+                            event: row['เหตุการณ์'] || '',
+                            risk: row['ความเสี่ยง'] || '',
+                            riskType: row['ประเภทความเสี่ยง'] || 'ด้านการดำเนินงาน',
+                            prob1: prob1,
+                            impact1: impact1,
+                            score1: prob1 * impact1,
+                            level1: getLevel(prob1 * impact1),
+                            action: row['ผลดำเนินการ'] || '',
+                            method: row['วิธีการจัดการ'] || '',
+                            owner: row['ผู้รับผิดชอบ'] || '',
+                            department: row['ฝ่าย'] || '',
+                            prob2: prob2,
+                            impact2: impact2,
+                            score2: prob2 * impact2,
+                            level2: getLevel(prob2 * impact2),
+                            status: row['สถานะ'] || '○',
+                            obstacle: row['ปัญหาอุปสรรค'] || '',
+                            createdAt: now,
+                            updatedAt: now
+                        };
+                    });
+
+                    if(confirm(`พบข้อมูล ${importedData.length} รายการ\nต้องการนำเข้าข้อมูล?`)) {
+                        data = importedData;
+                        filteredData = [];
+                        updateTable();
+                        update();
+                        updateDepartmentFilter();
+                        alert('✅ Import ข้อมูลเรียบร้อยแล้ว!');
+                    }
+
+                } catch(error) {
+                    console.error('Error:', error);
+                    alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        window.onload = () => {
+            update();
+        };
+    </script>
+</body>
+</html>
